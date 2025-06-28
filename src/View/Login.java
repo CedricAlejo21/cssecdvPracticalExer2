@@ -1,18 +1,20 @@
 package View;
 
-import javax.swing.JOptionPane;
+import Model.User;
+import java.sql.Timestamp;
+import java.util.Date;
+import org.mindrot.jbcrypt.BCrypt; // Import BCrypt
 
 public class Login extends javax.swing.JPanel {
 
     public Frame frame;
-    private int failedAttempts = 0; // Counter for failed login attempts
 
     public Login() {
         initComponents();
     }
 
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
 
         jLabel1 = new javax.swing.JLabel();
@@ -83,65 +85,78 @@ public class Login extends javax.swing.JPanel {
                     .addComponent(loginBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(126, Short.MAX_VALUE))
         );
-    }// </editor-fold>//GEN-END:initComponents
+    }// </editor-fold>                        
 
-    private void loginBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginBtnActionPerformed
-        // Input Validation
+    private void loginBtnActionPerformed(java.awt.event.ActionEvent evt) {                                         
         String username = usernameFld.getText().trim();
         String password = new String(passwordFld.getPassword()).trim();
 
-        // Check if username is empty
+        // Input validation: Check if username or password is empty
         if (username.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Username cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Error: Username field cannot be empty.");
             return;
         }
-
-        // Check if password is empty
         if (password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Password cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Error: Password field cannot be empty.");
             return;
         }
 
-        // Account Lockout Mechanism
-        if (failedAttempts >= 5) {
-            JOptionPane.showMessageDialog(this, "Account locked due to too many failed attempts. Please try again later.", "Account Locked", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        // Fetch user from the database
+        User user = frame.main.sqlite.getUserByUsername(username);
 
-        // Authentication Logic
-        boolean isAuthenticated = frame.authenticateUser(username, password);
+        // Check if user exists and password matches using BCrypt
+        if (user != null && verifyPassword(password, user.getPassword())) {
+            // Check if the account is locked
+            if (user.getLocked() == 1) {
+                System.out.println("Error: Account is locked. Please contact the administrator.");
+                return;
+            }
 
-        if (isAuthenticated) {
-            // Reset failed attempts counter
-            failedAttempts = 0;
+            // Log successful login attempt
+            logAuthenticationEvent(username, "SUCCESSFUL_LOGIN");
 
-            // Log successful login
-            frame.logAuthenticationEvent(username, true);
+            // Reset failed login counter
+            frame.main.sqlite.resetFailedLoginAttempts(username);
 
-            // Navigate to the main screen
-            frame.mainNav();
+            // Navigate to the main navigation panel
+            frame.mainNav(user);
         } else {
-            // Increment failed attempts counter
-            failedAttempts++;
+            // Increment failed login attempts
+            int failedAttempts = frame.main.sqlite.incrementFailedLoginAttempts(username);
 
             // Log failed login attempt
-            frame.logAuthenticationEvent(username, false);
+            logAuthenticationEvent(username, "FAILED_LOGIN");
 
-            // Show error message
-            JOptionPane.showMessageDialog(this, "Invalid username or password. Attempts left: " + (5 - failedAttempts), "Error", JOptionPane.ERROR_MESSAGE);
+            // Check if account should be locked
+            if (failedAttempts >= 3) {
+                frame.main.sqlite.lockAccount(username);
+                System.out.println("Error: Too many failed login attempts. Account has been locked.");
+            } else {
+                System.out.println("Error: Invalid username or password. Attempt " + failedAttempts + " of 3.");
+            }
         }
-    }//GEN-LAST:event_loginBtnActionPerformed
+    }                                        
 
-    private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_registerBtnActionPerformed
+    private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {                                            
         frame.registerNav();
-    }//GEN-LAST:event_registerBtnActionPerformed
+    }                                           
 
+    // Helper method to verify password using BCrypt
+    private boolean verifyPassword(String plainTextPassword, String hashedPassword) {
+        return BCrypt.checkpw(plainTextPassword, hashedPassword);
+    }
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
+    // Helper method to log authentication events
+    private void logAuthenticationEvent(String username, String event) {
+        String timestamp = new Timestamp(new Date().getTime()).toString();
+        frame.main.sqlite.addLogs(event, username, event.equals("SUCCESSFUL_LOGIN") ? "User logged in successfully" : "Failed login attempt", timestamp);
+    }
+
+    // Variables declaration - do not modify                     
     private javax.swing.JLabel jLabel1;
     private javax.swing.JButton loginBtn;
-    private javax.swing.JPasswordField passwordFld; // Updated to JPasswordField
+    private javax.swing.JPasswordField passwordFld; // Changed from JTextField to JPasswordField
     private javax.swing.JButton registerBtn;
     private javax.swing.JTextField usernameFld;
-    // End of variables declaration//GEN-END:variables
+    // End of variables declaration                   
 }

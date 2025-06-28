@@ -1,14 +1,12 @@
 package View;
 
 import Controller.Main;
+import Model.User;
 import java.awt.CardLayout;
-import javax.swing.JOptionPane;
+import java.security.NoSuchAlgorithmException;
+import javax.swing.WindowConstants;
 
 public class Frame extends javax.swing.JFrame {
-
-    public Main main;
-    private String loggedInUser = null; // Store the logged-in username
-    private String userRole = null; // Store the logged-in user's role
 
     public Frame() {
         initComponents();
@@ -17,6 +15,7 @@ public class Frame extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+
         Container = new javax.swing.JPanel();
         HomePnl = new javax.swing.JPanel();
         Content = new javax.swing.JPanel();
@@ -181,108 +180,116 @@ public class Frame extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void adminBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adminBtnActionPerformed
-        if ("admin".equals(userRole)) {
+        if (loggedInUser != null && loggedInUser.getRole() == 5) {
+            adminHomePnl.showPnl("home");
             contentView.show(Content, "adminHomePnl");
         } else {
-            JOptionPane.showMessageDialog(this, "Access Denied: You do not have permission to view this page.", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Access Denied: You do not have Administrator privileges.");
         }
     }//GEN-LAST:event_adminBtnActionPerformed
 
     private void managerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_managerBtnActionPerformed
-        if ("manager".equals(userRole)) {
+        if (loggedInUser != null && loggedInUser.getRole() == 4) {
+            managerHomePnl.showPnl("home");
             contentView.show(Content, "managerHomePnl");
         } else {
-            JOptionPane.showMessageDialog(this, "Access Denied: You do not have permission to view this page.", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Access Denied: You do not have Manager privileges.");
         }
     }//GEN-LAST:event_managerBtnActionPerformed
 
     private void staffBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_staffBtnActionPerformed
-        if ("staff".equals(userRole)) {
+        if (loggedInUser != null && loggedInUser.getRole() == 3) {
+            staffHomePnl.showPnl("home");
             contentView.show(Content, "staffHomePnl");
         } else {
-            JOptionPane.showMessageDialog(this, "Access Denied: You do not have permission to view this page.", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Access Denied: You do not have Staff privileges.");
         }
     }//GEN-LAST:event_staffBtnActionPerformed
 
     private void clientBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clientBtnActionPerformed
-        if ("client".equals(userRole)) {
+        if (loggedInUser != null && loggedInUser.getRole() == 2) {
+            clientHomePnl.showPnl("home");
             contentView.show(Content, "clientHomePnl");
         } else {
-            JOptionPane.showMessageDialog(this, "Access Denied: You do not have permission to view this page.", "Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Access Denied: You do not have Client privileges.");
         }
     }//GEN-LAST:event_clientBtnActionPerformed
 
     private void logoutBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logoutBtnActionPerformed
-        loggedInUser = null;
-        userRole = null;
+        loggedInUser = null; // Clear session data
         frameView.show(Container, "loginPnl");
     }//GEN-LAST:event_logoutBtnActionPerformed
 
+    public Main main;
+    private User loggedInUser;
     public Login loginPnl = new Login();
     public Register registerPnl = new Register();
+    
     private AdminHome adminHomePnl = new AdminHome();
     private ManagerHome managerHomePnl = new ManagerHome();
     private StaffHome staffHomePnl = new StaffHome();
     private ClientHome clientHomePnl = new ClientHome();
+    
     private CardLayout contentView = new CardLayout();
     private CardLayout frameView = new CardLayout();
-
-    public void init(Main controller) {
+    
+    public void init(Main controller){
         this.setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         this.setTitle("CSSECDV - SECURITY Svcs");
         this.setLocationRelativeTo(null);
         this.main = controller;
+        
         loginPnl.frame = this;
         registerPnl.frame = this;
         adminHomePnl.init(main.sqlite);
         clientHomePnl.init(main.sqlite);
         managerHomePnl.init(main.sqlite);
         staffHomePnl.init(main.sqlite);
+
         Container.setLayout(frameView);
         Container.add(loginPnl, "loginPnl");
         Container.add(registerPnl, "registerPnl");
         Container.add(HomePnl, "homePnl");
+
         frameView.show(Container, "loginPnl");
+
         Content.setLayout(contentView);
         Content.add(adminHomePnl, "adminHomePnl");
         Content.add(managerHomePnl, "managerHomePnl");
         Content.add(staffHomePnl, "staffHomePnl");
         Content.add(clientHomePnl, "clientHomePnl");
+
         this.setVisible(true);
     }
+    
+    public void mainNav(){
+        User user = null;
+        // Store the logged-in user in the session
+        this.loggedInUser = user;
 
-    public void mainNav(String username, String role) {
-        loggedInUser = username;
-        userRole = role;
-        updateNavigationButtons();
+        // Show or hide role-specific buttons based on the user's role
+        adminBtn.setVisible(user.getRole() == 5); // Admin
+        managerBtn.setVisible(user.getRole() == 4); // Manager
+        staffBtn.setVisible(user.getRole() == 3); // Staff
+        clientBtn.setVisible(user.getRole() == 2); // Client
+
         frameView.show(Container, "homePnl");
     }
-
-    public void loginNav() {
-        loggedInUser = null;
-        userRole = null;
-        updateNavigationButtons();
+    
+    public void loginNav(){
         frameView.show(Container, "loginPnl");
     }
-
-    public void registerNav() {
+    
+    public void registerNav(){
         frameView.show(Container, "registerPnl");
     }
-
-    public boolean registerAction(String username, String password, String confpass) {
+    
+    public void registerAction(String username, String password, String confpass) throws NoSuchAlgorithmException{
         if (!password.equals(confpass)) {
-            JOptionPane.showMessageDialog(this, "Password and Confirm Password do not match!", "Error", JOptionPane.ERROR_MESSAGE);
-            return false;
+            System.out.println("Error: Passwords do not match.");
+            return;
         }
-        return main.sqlite.addUser(username, password);
-    }
-
-    private void updateNavigationButtons() {
-        adminBtn.setVisible("admin".equals(userRole));
-        managerBtn.setVisible("manager".equals(userRole));
-        staffBtn.setVisible("staff".equals(userRole));
-        clientBtn.setVisible("client".equals(userRole));
-        logoutBtn.setVisible(loggedInUser != null);
+        main.sqlite.addUser(username, password, 2);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -297,4 +304,8 @@ public class Frame extends javax.swing.JFrame {
     private javax.swing.JButton managerBtn;
     private javax.swing.JButton staffBtn;
     // End of variables declaration//GEN-END:variables
+
+    void mainNav(User user) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
 }

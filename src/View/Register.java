@@ -1,5 +1,6 @@
 package View;
 
+import Controller.Main;
 import javax.swing.JOptionPane;
 
 public class Register extends javax.swing.JPanel {
@@ -11,7 +12,7 @@ public class Register extends javax.swing.JPanel {
     }
 
     @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
 
         registerBtn = new javax.swing.JButton();
@@ -95,64 +96,66 @@ public class Register extends javax.swing.JPanel {
                 .addComponent(registerBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(64, Short.MAX_VALUE))
         );
-    }// </editor-fold>//GEN-END:initComponents
+    }// </editor-fold>                        
 
-    private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_registerBtnActionPerformed
-        // Input Validation
+    private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {                                            
         String username = usernameFld.getText().trim();
         String password = new String(passwordFld.getPassword()).trim();
         String confirmPassword = new String(confpassFld.getPassword()).trim();
 
-        // Check if any field is empty
-        if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "All fields are required!", "Error", JOptionPane.ERROR_MESSAGE);
+        // Input Validation: Check if fields are not empty
+        if (username.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Error: Username cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Error: Password cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (confirmPassword.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Error: Confirm Password cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Validate username format (alphanumeric, 4-20 characters)
-        if (!username.matches("^[a-zA-Z0-9]{4,20}$")) {
-            JOptionPane.showMessageDialog(this, "Username must be 4-20 alphanumeric characters.", "Error", JOptionPane.ERROR_MESSAGE);
+        // Username Format Validation: Alphanumeric and length between 4 and 20 characters
+        if (!username.matches("[a-zA-Z0-9]{4,20}")) {
+            JOptionPane.showMessageDialog(this, "Error: Username must be alphanumeric and 4-20 characters long.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Password complexity check (minimum 8 characters, at least one uppercase, one lowercase, one digit, one special character)
-        String passwordPattern = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
-        if (!password.matches(passwordPattern)) {
-            JOptionPane.showMessageDialog(this, "Password must be at least 8 characters long and include uppercase, lowercase, digits, and special characters.", "Error", JOptionPane.ERROR_MESSAGE);
+        // Password Complexity Check: Minimum 8 characters, at least one uppercase, one lowercase, one digit, one special character
+        if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
+            JOptionPane.showMessageDialog(this, "Error: Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Check if passwords match
+        // Password Confirmation Validation
         if (!password.equals(confirmPassword)) {
-            JOptionPane.showMessageDialog(this, "Passwords do not match!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error: Passwords do not match.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Call the registration action
-        boolean success = frame.registerAction(username, password, confirmPassword);
-
-        // Provide feedback to the user
-        if (success) {
+        // Attempt to add the user to the database
+        try {
+            frame.main.sqlite.addUser(username, password, 2); // Default role code for registered users is 2 (Client)
             JOptionPane.showMessageDialog(this, "Registration successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this, "Registration failed. Please try again.", "Error", JOptionPane.ERROR_MESSAGE);
+            frame.loginNav(); // Navigate to the login page after successful registration
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: Registration failed. Please try again.", "Database Error", JOptionPane.ERROR_MESSAGE);
+            System.out.println(ex.getMessage());
         }
+    }                                           
 
-        // Navigate to the login screen
+    private void backBtnActionPerformed(java.awt.event.ActionEvent evt) {                                        
         frame.loginNav();
-    }//GEN-LAST:event_registerBtnActionPerformed
+    }                                       
 
-    private void backBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backBtnActionPerformed
-        frame.loginNav();
-    }//GEN-LAST:event_backBtnActionPerformed
-
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
+    // Variables declaration - do not modify                     
     private javax.swing.JButton backBtn;
-    private javax.swing.JPasswordField confpassFld; // Updated to JPasswordField
+    private javax.swing.JPasswordField confpassFld; // Changed from JTextField to JPasswordField
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JPasswordField passwordFld; // Updated to JPasswordField
+    private javax.swing.JPasswordField passwordFld; // Changed from JTextField to JPasswordField
     private javax.swing.JButton registerBtn;
     private javax.swing.JTextField usernameFld;
-    // End of variables declaration//GEN-END:variables
+    // End of variables declaration                   
 }
