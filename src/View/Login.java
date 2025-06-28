@@ -87,55 +87,55 @@ public class Login extends javax.swing.JPanel {
         );
     }// </editor-fold>                        
 
-    private void loginBtnActionPerformed(java.awt.event.ActionEvent evt) {                                         
-        String username = usernameFld.getText().trim();
-        String password = new String(passwordFld.getPassword()).trim();
+private void loginBtnActionPerformed(java.awt.event.ActionEvent evt) {                                         
+    String username = usernameFld.getText().trim();
+    String password = new String(passwordFld.getPassword()).trim();
 
-        // Input validation: Check if username or password is empty
-        if (username.isEmpty()) {
-            System.out.println("Error: Username field cannot be empty.");
+    // Input validation: Check if username or password is empty
+    if (username.isEmpty()) {
+        System.out.println("Error: Username field cannot be empty.");
+        return;
+    }
+    if (password.isEmpty()) {
+        System.out.println("Error: Password field cannot be empty.");
+        return;
+    }
+
+    // Fetch user from the database
+    User user = frame.main.sqlite.getUserByUsername(username);
+
+    // Check if user exists and password matches
+    if (user != null && verifyPassword(password, user.getPassword())) {
+        // Check if the account is locked
+        if (user.getLocked() == 1) {
+            System.out.println("Error: Account is locked. Please contact the administrator.");
             return;
         }
-        if (password.isEmpty()) {
-            System.out.println("Error: Password field cannot be empty.");
-            return;
-        }
 
-        // Fetch user from the database
-        User user = frame.main.sqlite.getUserByUsername(username);
+        // Log successful login attempt
+        logAuthenticationEvent(username, "SUCCESSFUL_LOGIN");
 
-        // Check if user exists and password matches using BCrypt
-        if (user != null && verifyPassword(password, user.getPassword())) {
-            // Check if the account is locked
-            if (user.getLocked() == 1) {
-                System.out.println("Error: Account is locked. Please contact the administrator.");
-                return;
-            }
+        // Reset failed login counter
+        frame.main.sqlite.resetFailedLoginAttempts(username);
 
-            // Log successful login attempt
-            logAuthenticationEvent(username, "SUCCESSFUL_LOGIN");
+        // Navigate to the main navigation panel
+        frame.mainNav(user);
+    } else {
+        // Increment failed login attempts
+        int failedAttempts = frame.main.sqlite.incrementFailedLoginAttempts(username);
 
-            // Reset failed login counter
-            frame.main.sqlite.resetFailedLoginAttempts(username);
+        // Log failed login attempt
+        logAuthenticationEvent(username, "FAILED_LOGIN");
 
-            // Navigate to the main navigation panel
-            frame.mainNav(user);
+        // Check if account should be locked
+        if (failedAttempts >= 3) {
+            frame.main.sqlite.lockAccount(username);
+            System.out.println("Error: Too many failed login attempts. Account has been locked.");
         } else {
-            // Increment failed login attempts
-            int failedAttempts = frame.main.sqlite.incrementFailedLoginAttempts(username);
-
-            // Log failed login attempt
-            logAuthenticationEvent(username, "FAILED_LOGIN");
-
-            // Check if account should be locked
-            if (failedAttempts >= 3) {
-                frame.main.sqlite.lockAccount(username);
-                System.out.println("Error: Too many failed login attempts. Account has been locked.");
-            } else {
-                System.out.println("Error: Invalid username or password. Attempt " + failedAttempts + " of 3.");
-            }
+            System.out.println("Error: Invalid username or password. Attempt " + failedAttempts + " of 3.");
         }
-    }                                        
+    }
+}                               
 
     private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {                                            
         frame.registerNav();

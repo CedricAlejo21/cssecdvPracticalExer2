@@ -74,7 +74,8 @@ public class SQLite {
                 + " username TEXT NOT NULL UNIQUE,"
                 + " password TEXT NOT NULL,"
                 + " role INTEGER DEFAULT 2,"
-                + " locked INTEGER DEFAULT 0"
+                + " locked INTEGER DEFAULT 0,"
+                + " failed_attempts INTEGER DEFAULT 0"
                 + ");";
         executeUpdate(sql, "Table users in database.db created.");
     }
@@ -303,22 +304,98 @@ public class SQLite {
     }
 
     public User getUserByUsername(String username) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        String sql = "SELECT id, username, password, role, locked FROM users WHERE username = ?";
+        try (Connection conn = DriverManager.getConnection(driverURL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username); // Safely set the username parameter to prevent SQL injection
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return new User(
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("password"), // Password should be hashed
+                        rs.getInt("role"),
+                        rs.getInt("locked")
+                );
+            }
+        } catch (SQLException ex) {
+            System.out.println("Error retrieving user by username: " + ex.getMessage());
+        }
+        return null; // Return null if no user is found
     }
-
+    
     public void resetFailedLoginAttempts(String username) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        String sql = "UPDATE users SET failed_attempts = 0 WHERE username = ?";
+        try (Connection conn = DriverManager.getConnection(driverURL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            System.out.println("Error resetting failed login attempts: " + ex.getMessage());
+        }
     }
 
     public int incrementFailedLoginAttempts(String username) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        String incrementSql = "UPDATE users SET failed_attempts = failed_attempts + 1 WHERE username = ?";
+        String selectSql = "SELECT failed_attempts FROM users WHERE username = ?";
+        try (Connection conn = DriverManager.getConnection(driverURL)) {
+            // Increment failed attempts
+            try (PreparedStatement incrementStmt = conn.prepareStatement(incrementSql)) {
+                incrementStmt.setString(1, username);
+                incrementStmt.executeUpdate();
+            }
+            // Retrieve updated failed attempts
+            try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+                selectStmt.setString(1, username);
+                ResultSet rs = selectStmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt("failed_attempts");
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("Error updating failed login attempts: " + ex.getMessage());
+        }
+        return 0;
     }
 
     public void lockAccount(String username) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        String sql = "UPDATE users SET locked = 1 WHERE username = ?";
+        try (Connection conn = DriverManager.getConnection(driverURL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            System.out.println("Error locking account: " + ex.getMessage());
+        }
+    }
+    
+    public void logAuthenticationEvent(String username, String event) {
+    String sql = "INSERT INTO logs(event, username, desc, timestamp) VALUES(?, ?, ?, ?)";
+    try (Connection conn = DriverManager.getConnection(driverURL);
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setString(1, event);
+        pstmt.setString(2, username);
+        pstmt.setString(3, event.equals("SUCCESSFUL_LOGIN") ? "User logged in successfully" : "Failed login attempt");
+        pstmt.setString(4, new java.sql.Timestamp(new java.util.Date().getTime()).toString());
+        pstmt.executeUpdate();
+    } catch (SQLException ex) {
+        System.out.println("Error logging authentication event: " + ex.getMessage());
+    }
     }
 
-    public Product getProduct(String name) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public Product getProduct(String name){
+        String sql = "SELECT name, stock, price FROM product WHERE name='" + name + "';";
+        Product product = null;
+        try (Connection conn = DriverManager.getConnection(driverURL);
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)){
+            product = new Product(rs.getString("name"),
+                                   rs.getInt("stock"),
+                                   rs.getFloat("price"));
+        } catch (Exception ex) {
+            System.out.print(ex);
+        }
+        return product;
     }
+    
 }
